@@ -1,0 +1,26 @@
+textarea {
+	height: 70px;
+}
+
+body {
+	background-color: #777;
+}
+
+#container {
+	width: 1000px;
+	margin: auto;
+	background-color: #EEE;
+	padding: 10px;
+}
+
+#msg_window {
+	background-color: #DDD;
+	overflow-y: scroll;
+	height: 250px;
+}
+
+#button_group {
+	width: 105px;
+	height: 75px;
+	float: right;
+}

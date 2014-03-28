@@ -1,0 +1,2 @@
+# messageBoard
+### a Sails application

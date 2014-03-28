@@ -1,0 +1,187 @@
+
+   <!-- Currently deployed at:  http://messageboard-10516.onmodulus.net/  -->
+
+   <div id="container" ng-controller="MessageBoardController">
+       <h2>Traveling Salesman Programming Contest Message Board </h2>
+       <h4>Total Messages: {{getTotalMessages()}}</h4>
+       <div id="msg_window">
+           <ul>
+               <li ng-repeat="message in messages | orderBy:'createdAt':true">   <!-- do reverse = true -->
+                  <p>
+                    <strong>{{message.name}} wrote</strong>: {{message.text}}
+                    </br>
+                    {{message.createdAt | date:'MM/dd/yyyy @ h:mma'}} 
+                    <button class="btn btn-primary btn-sm glyphicon glyphicon-remove" style="width: 35px; height: 22px" ng-click="remove(message)"></button>  
+                  </p>  
+               </li>
+           </ul>
+       </div>
+       <div id="button_group">
+           <button type="button" class="btn btn-default btn-small" ng-click="prev()">
+             <span class="glyphicon glyphicon-arrow-left"></span>
+           </button>
+           <button type="button" class="btn btn-default btn-small" ng-click="next()">
+             <span class="glyphicon glyphicon-arrow-right"></span>
+           </button>
+       </div>    
+       <br /><br />
+       <form class="form-inline" role="form" >
+          <div class="form-group">
+             <label for="searchName" class="col-sm-4 control-label">Search by Name:</label>
+             <input type="text" ng-model="searchName" id="searchName">
+             <button class="btn" class="col-sm-2" ng-click="searchMessage()">Search</button>
+
+           
+          </div>   
+          <div class="form-group">
+             <label for="numPage" class="col-sm-4 control-label">Messages per page:</label>
+             <input type="text" ng-model="numPage" id="numPage">
+             <button class="btn" class="col-sm-2" ng-click="setPage()">Set</button>  
+          </div>   
+       </form>
+       <br /> 
+       <hr style="background:#555; border:0; height:2px; width:900px;" />
+       <form class="form-horizontal" role="form" >
+          <div class="form-group">
+             <label for="inputName" class="col-sm-2 control-label">Add New - Name:</label>
+             <input type="text" ng-model="formName" id="inputName">
+          </div>   
+          <div class="form-group">
+             <label for="inputMsg" class="col-sm-2 control-label">Message:</label>
+             <textarea ng-model="formMessage" class="col-sm-6" id="inputMsg"></textarea>
+          </div>
+<!--           <div class="form-group">   
+            <label for="inputDate" class="col-sm-2 control-label">Date:</label>
+            <input type="text" ng-model="formDate" id="inputDate">
+          </div>  --> 
+          <div class="form-group">
+             <div class="col-sm-offset-2">   
+                <button class="btn" class="col-sm-2" ng-click="addMessage()">Add</button>
+            </div>
+          </div>   
+       </form>
+
+       <!-- Modal, old Bootstrap stuff -->
+<!--        <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+         <div class="modal-content">
+            <div class="modal-header">
+              <strong>Delete Confirm</strong>
+            </div>
+            <div class="modal-body">
+              Delete message?
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+               <button type="button" class="btn btn-primary">Delete</button>
+            </div>
+         </div>
+        </div> 
+       </div> -->
+   </div>
+
+<script type='text/javascript'>
+// Create an Angular module named messageBoard, ngResource module is required for $resource
+var messageBoard = angular.module('messageBoard', ['ngResource']);
+
+// Register the 'Message' service for dependency injection:
+//  Message is the id of the service, 
+// http://docs.angularjs.org/guide/dev_guide.services.creating_services 
+// More details:  http://docs.angularjs.org/guide/di 
+
+// http://docs.angularjs.org/api/ngResource.$resource
+messageBoard.factory('Message', ['$resource', function($resource){
+    // return service instance, $resource takes URL template and optional URL params
+    return $resource('/message/:id', {id:'@id'});
+}]);
+
+
+// $scope and Message are the dependancies, Message as in above. Message is a service based on $resource. 
+function MessageBoardController($scope, Message) {
+    var all = Message.query(function (response) {
+      // query maps to an ng.$http call with GET
+
+      // underscore.js gives ruby like stuff in JS
+      // Leave display duties to Angular, let controller handle how to store. 
+
+      all = all.reverse();  // Reverse the message order, so that newest are on top. 
+      all.forEach(function(message) {
+         message.date = message.createdAt.substring(0, message.createdAt.indexOf("T"));
+      }); 
+      offset = Math.floor(all.length/numPerPage);
+      updatePage();
+
+    });
+
+    var numPerPage = $scope.numPage = 15;
+    var offset = 0;
+      
+    $scope.getTotalMessages = function () {
+        return all.length;
+    };
+
+    $scope.addMessage = function () {
+        $scope.newMsg = new Message({name:$scope.formName, text:$scope.formMessage});
+        // $save maps to  ng.$http call of POST
+        $scope.newMsg.$save();
+        all.unshift($scope.newMsg);    // put new message at beginning of array
+        $scope.formMessage = '';
+        updatePage();
+    };
+
+    var updatePage = function () {
+        $scope.messages = all.slice(numPerPage*offset, numPerPage*(offset+1));
+    }
+
+    $scope.setPage = function () {
+       numPerPage = $scope.numPage;
+       updatePage();
+    };
+
+    $scope.prev = function () {
+       offset--;
+       if (offset < 0) offset = 0;
+       updatePage();
+    }
+
+    $scope.next = function () {
+       offset++;
+       if (offset > all.length/numPerPage) offset = Math.floor(all.length/numPerPage);
+       updatePage();
+    }
+
+    $scope.remove = function (message) {
+        conf = confirm("Are you sure you want to delete this message?");
+        if (conf == true)
+          {
+             message.$delete(function (resp) {
+                 all = Message.query(function (response) {
+                   all = all.reverse();
+                   updatePage();
+                 });
+             });    
+          }
+    }
+
+
+    $scope.searchMessage = function () {
+        if ($scope.searchName !== '') {
+           all = Message.query({name: $scope.searchName}, function(response) {
+              all = all.reverse();
+              offset = 0;
+              updatePage();
+           });
+        }    
+        else {
+           all = Message.query(function (response) {
+               all = all.reverse();
+               offset = 0;
+               updatePage();
+           });
+        }  
+                
+    }
+}
+
+</script>
+
